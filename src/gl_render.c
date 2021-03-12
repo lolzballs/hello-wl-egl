@@ -1,5 +1,4 @@
-#include <GL/gl.h>
-#include <GL/glext.h>
+#include <GLES2/gl2.h>
 #include <stdio.h>
 
 #include "gl_render.h"

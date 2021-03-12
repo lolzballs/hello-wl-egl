@@ -19,7 +19,7 @@ add_project_arguments(
 
 cc = meson.get_compiler('c')
 
-gl = dependency('gl')
+gles2 = dependency('glesv2')
 egl = dependency('egl')
 
 wayland_protos = dependency('wayland-protocols', version: '>=1.13')
@@ -76,7 +76,7 @@ executable(
   'hello-egl',
   src_files,
   dependencies: [
-    gl,
+    gles2,
     egl,
     wayland_client,
     wayland_egl,
