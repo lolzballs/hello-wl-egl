@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <GL/gl.h>
+#include <GL/glext.h>
 #include <wayland-client.h>
 #include <wayland-egl.h>
 #include <stdlib.h>
@@ -47,12 +48,17 @@ static struct wl_callback_listener frame_listener = {
 };
 
 static void
-draw(void) {
-	eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
-
+gl_render(void) {
 	glViewport(0, 0, width, height);
 	glClearColor(1.0, 1.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+static void
+draw(void) {
+	eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
+
+	gl_render();
 
 	frame_callback = wl_surface_frame(surface);
 	wl_callback_add_listener(frame_callback, &frame_listener, NULL);
@@ -135,6 +141,7 @@ main(int argc, char **argv) {
 	assert(xdg_wm_base);
 	assert(xdg_decoration_manager);
 
+	eglBindAPI(EGL_OPENGL_API);
 	egl_init(display);
 
 	surface = wl_compositor_create_surface(compositor);
@@ -159,6 +166,12 @@ main(int argc, char **argv) {
 			egl_config, egl_window, NULL);
 
 	wl_display_roundtrip(display);
+
+	eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
+
+	const uint8_t *version = glGetString(GL_VERSION);
+	printf("%s\n", version);
+
 	draw();
 
 	while (wl_display_dispatch(display) != -1 && running) {
