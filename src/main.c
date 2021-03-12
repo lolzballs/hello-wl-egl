@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <GLES3/gl3.h>
 #include <wayland-client.h>
 #include <wayland-egl.h>
 #include <stdlib.h>
@@ -50,6 +51,7 @@ static void
 draw(void) {
 	eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
 
+	glViewport(0, 0, width, height);
 	gl_render_draw();
 
 	frame_callback = wl_surface_frame(surface);
