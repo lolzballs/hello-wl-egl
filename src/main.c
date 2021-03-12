@@ -1,6 +1,4 @@
 #include <assert.h>
-#include <GL/gl.h>
-#include <GL/glext.h>
 #include <wayland-client.h>
 #include <wayland-egl.h>
 #include <stdlib.h>
@@ -135,7 +133,7 @@ main(int argc, char **argv) {
 	assert(xdg_wm_base);
 	assert(xdg_decoration_manager);
 
-	eglBindAPI(EGL_OPENGL_API);
+	eglBindAPI(EGL_OPENGL_ES_API);
 	egl_init(display);
 
 	surface = wl_compositor_create_surface(compositor);

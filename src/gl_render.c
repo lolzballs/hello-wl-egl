@@ -1,4 +1,4 @@
-#include <GLES2/gl2.h>
+#include <GLES3/gl3.h>
 #include <stdio.h>
 
 #include "gl_render.h"

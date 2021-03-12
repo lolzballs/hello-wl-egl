@@ -76,8 +76,8 @@ executable(
   'hello-egl',
   src_files,
   dependencies: [
-    gles2,
     egl,
+    gles2,
     wayland_client,
     wayland_egl,
     xdg_decoration_unstable_v1,
