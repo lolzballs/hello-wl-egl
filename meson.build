@@ -69,6 +69,7 @@ endforeach
 src_files = files(
   'src/main.c',
   'src/egl_common.c',
+  'src/gl_render.c',
 )
 
 executable(

@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "egl_common.h"
+#include "gl_render.h"
 #include "xdg-decoration-unstable-v1-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
 
@@ -48,17 +49,10 @@ static struct wl_callback_listener frame_listener = {
 };
 
 static void
-gl_render(void) {
-	glViewport(0, 0, width, height);
-	glClearColor(1.0, 1.0, 0.0, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT);
-}
-
-static void
 draw(void) {
 	eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
 
-	gl_render();
+	gl_render_draw();
 
 	frame_callback = wl_surface_frame(surface);
 	wl_callback_add_listener(frame_callback, &frame_listener, NULL);
@@ -168,9 +162,7 @@ main(int argc, char **argv) {
 	wl_display_roundtrip(display);
 
 	eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
-
-	const uint8_t *version = glGetString(GL_VERSION);
-	printf("%s\n", version);
+	gl_render_init();
 
 	draw();
 
