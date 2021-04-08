@@ -9,6 +9,7 @@
 
 #include "egl_common.h"
 #include "gl_render.h"
+#include "viewporter-client-protocol.h"
 #include "xdg-decoration-unstable-v1-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
 
@@ -20,6 +21,9 @@ static struct wl_display *display;
 static struct wl_compositor *compositor;
 static struct xdg_wm_base *xdg_wm_base;
 static struct zxdg_decoration_manager_v1 *xdg_decoration_manager;
+
+static struct wp_viewporter *wp_viewporter;
+static struct wp_viewport *wp_viewport;
 
 static struct wl_surface *surface;
 static struct xdg_toplevel *xdg_toplevel;
@@ -131,6 +135,9 @@ global_registry_handler(void *data, struct wl_registry *registry, uint32_t id,
 	} else if (strcmp(interface, zxdg_decoration_manager_v1_interface.name) == 0) {
 		xdg_decoration_manager = wl_registry_bind(registry, id,
 				&zxdg_decoration_manager_v1_interface, 1);
+	} else if (strcmp(interface, wp_viewporter_interface.name) == 0) {
+		wp_viewporter = wl_registry_bind(registry, id,
+				&wp_viewporter_interface, 1);
 	} else if (strcmp(interface, wl_output_interface.name) == 0) {
 		wl_registry_bind(registry, id, &wl_output_interface, 3);
 	}
@@ -153,11 +160,13 @@ main(int argc, char **argv) {
 	assert(compositor);
 	assert(xdg_wm_base);
 	assert(xdg_decoration_manager);
+	assert(wp_viewporter);
 
 	eglBindAPI(EGL_OPENGL_ES_API);
 	egl_init(display);
 
 	surface = wl_compositor_create_surface(compositor);
+
 	struct xdg_surface *xdg_surface =
 		xdg_wm_base_get_xdg_surface(xdg_wm_base, surface);
 	xdg_toplevel = xdg_surface_get_toplevel(xdg_surface);
@@ -170,6 +179,7 @@ main(int argc, char **argv) {
 				xdg_decoration_manager, xdg_toplevel);
 	zxdg_toplevel_decoration_v1_set_mode(xdg_toplevel_decoration,
 			ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+	wp_viewport = wp_viewporter_get_viewport(wp_viewporter, surface);
 
 	wl_surface_commit(surface);
 	wl_surface_add_listener(surface, &wl_surface_listener, NULL);

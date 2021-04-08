@@ -42,6 +42,7 @@ wayland_scanner_client = generator(
 
 client_protocols = [
   [wl_protocol_dir + '/stable/xdg-shell', 'xdg-shell.xml'],
+  [wl_protocol_dir + '/stable/viewporter', 'viewporter.xml'],
   [wl_protocol_dir + '/unstable/xdg-decoration', 'xdg-decoration-unstable-v1.xml'],
 ]
 
@@ -80,6 +81,7 @@ executable(
     gles2,
     wayland_client,
     wayland_egl,
+    viewporter,
     xdg_decoration_unstable_v1,
     xdg_shell,
   ],
