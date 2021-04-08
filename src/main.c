@@ -61,6 +61,23 @@ draw(void) {
 }
 
 static void
+surface_enter_callback(void *data, struct wl_surface *surface,
+		struct wl_output *output) {
+	printf("surface entered an output\n");
+}
+
+static void
+surface_leave_callback(void *data, struct wl_surface *surface,
+		struct wl_output *output) {
+	printf("surface left an output\n");
+}
+
+static struct wl_surface_listener wl_surface_listener = {
+	.enter = surface_enter_callback,
+	.leave = surface_leave_callback,
+};
+
+static void
 xdg_surface_configure_handler(void *data, struct xdg_surface *xdg_surface,
 		uint32_t serial) {
 	xdg_surface_ack_configure(xdg_surface, serial);
@@ -114,6 +131,8 @@ global_registry_handler(void *data, struct wl_registry *registry, uint32_t id,
 	} else if (strcmp(interface, zxdg_decoration_manager_v1_interface.name) == 0) {
 		xdg_decoration_manager = wl_registry_bind(registry, id,
 				&zxdg_decoration_manager_v1_interface, 1);
+	} else if (strcmp(interface, wl_output_interface.name) == 0) {
+		wl_registry_bind(registry, id, &wl_output_interface, 3);
 	}
 }
 
@@ -153,6 +172,7 @@ main(int argc, char **argv) {
 			ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 
 	wl_surface_commit(surface);
+	wl_surface_add_listener(surface, &wl_surface_listener, NULL);
 	wl_display_roundtrip(display);
 
 	egl_window = wl_egl_window_create(surface, width, height);
