@@ -13,14 +13,19 @@
 #include "xdg-decoration-unstable-v1-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
 
+
 static bool running = true;
 static int32_t width;
 static int32_t height;
+static int32_t render_width;
+static int32_t render_height;
+static struct output *active_output;
 
 static struct wl_display *display;
 static struct wl_compositor *compositor;
 static struct xdg_wm_base *xdg_wm_base;
 static struct zxdg_decoration_manager_v1 *xdg_decoration_manager;
+static struct wl_list outputs;
 
 static struct wp_viewporter *wp_viewporter;
 static struct wp_viewport *wp_viewport;
@@ -32,6 +37,12 @@ static struct wl_egl_window *egl_window;
 static EGLSurface egl_surface;
 
 static struct wl_callback *frame_callback;
+
+struct output {
+	struct wl_output *wl_output;
+	int32_t scale;
+	struct wl_list link;
+};
 
 static void draw(void);
 
@@ -55,7 +66,7 @@ static void
 draw(void) {
 	eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
 
-	glViewport(0, 0, width, height);
+	glViewport(0, 0, render_width, render_height);
 	gl_render_draw();
 
 	frame_callback = wl_surface_frame(surface);
@@ -65,9 +76,50 @@ draw(void) {
 }
 
 static void
+set_render_size(void) {
+	if (active_output == NULL) {
+		return;
+	}
+
+	if (egl_window != NULL) {
+		render_width = active_output->scale * width;
+		render_height = active_output->scale * height;
+		printf("rendering at %dx%d\n", render_width, render_height);
+		wl_egl_window_resize(egl_window, render_width, render_height, 0, 0);
+	}
+	if (wp_viewport != NULL) {
+		wp_viewport_set_destination(wp_viewport, width, height);
+	}
+
+	wl_surface_commit(surface);
+}
+
+static void
+output_scale_handler(void *data, struct wl_output *output, int32_t scale) {
+	struct output *o = data;
+	o->scale = scale;
+	set_render_size();
+}
+
+static struct wl_output_listener output_listener = {
+	.scale = output_scale_handler,
+	.done = noop,
+	.mode = noop,
+	.geometry = noop,
+};
+
+static void
 surface_enter_callback(void *data, struct wl_surface *surface,
 		struct wl_output *output) {
 	printf("surface entered an output\n");
+	struct output *o;
+	wl_list_for_each(o, &outputs, link) {
+		if (o->wl_output == output) {
+			active_output = o;
+			break;
+		}
+	}
+	set_render_size();
 }
 
 static void
@@ -85,11 +137,7 @@ static void
 xdg_surface_configure_handler(void *data, struct xdg_surface *xdg_surface,
 		uint32_t serial) {
 	xdg_surface_ack_configure(xdg_surface, serial);
-	if (egl_window != NULL) {
-		wl_egl_window_resize(egl_window, width, height, 0, 0);
-	}
-
-	wl_surface_commit(surface);
+	set_render_size();
 }
 
 static const struct xdg_surface_listener xdg_surface_listener = {
@@ -139,7 +187,13 @@ global_registry_handler(void *data, struct wl_registry *registry, uint32_t id,
 		wp_viewporter = wl_registry_bind(registry, id,
 				&wp_viewporter_interface, 1);
 	} else if (strcmp(interface, wl_output_interface.name) == 0) {
-		wl_registry_bind(registry, id, &wl_output_interface, 3);
+		struct output *output = calloc(sizeof(struct output), 1);
+		output->wl_output = wl_registry_bind(registry, id,
+				&wl_output_interface, 3);
+		output->scale = 1;
+		wl_list_insert(&outputs, &output->link);
+		wl_output_add_listener(output->wl_output, &output_listener,
+				output);
 	}
 }
 
@@ -152,6 +206,8 @@ int
 main(int argc, char **argv) {
 	display = wl_display_connect(NULL);
 	assert(display);
+
+	wl_list_init(&outputs);
 
 	struct wl_registry *registry = wl_display_get_registry(display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);
@@ -166,6 +222,7 @@ main(int argc, char **argv) {
 	egl_init(display);
 
 	surface = wl_compositor_create_surface(compositor);
+	wl_surface_add_listener(surface, &wl_surface_listener, NULL);
 
 	struct xdg_surface *xdg_surface =
 		xdg_wm_base_get_xdg_surface(xdg_wm_base, surface);
@@ -182,7 +239,6 @@ main(int argc, char **argv) {
 	wp_viewport = wp_viewporter_get_viewport(wp_viewporter, surface);
 
 	wl_surface_commit(surface);
-	wl_surface_add_listener(surface, &wl_surface_listener, NULL);
 	wl_display_roundtrip(display);
 
 	egl_window = wl_egl_window_create(surface, width, height);
